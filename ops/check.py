@@ -12,7 +12,10 @@ import yaml
 
 ROOT = Path(__file__).resolve().parent.parent
 DIST = Path(sys.argv[1]) if len(sys.argv) > 1 else ROOT / "dist"
-CFG = yaml.safe_load((ROOT / "config.yml").read_text(encoding="utf-8"))
+sys.path.insert(0, str(ROOT))
+from build import load_config  # noqa: E402
+CFG = load_config()
+BP = (CFG.get("base_path") or "").rstrip("/")
 
 BANNED = ["공짜", "누구나", "무조건", "최저가", "1위", "0원", "전국 최저", "정부 지원", "합법"]
 TITLE_MAX = 60
@@ -120,7 +123,10 @@ def main():
             elif u.netloc == "ponanpa.com" and u.path not in ("", "/"):
                 warns.append(f"{rel}: utm 없는 ponanpa.com 링크 {href}")
             elif not u.netloc and not u.scheme and href.startswith("/"):
-                target = DIST / href.lstrip("/")
+                if BP and not href.startswith(BP + "/"):
+                    errors.append(f"{rel}: base_path 없는 내부 링크 {href}")
+                    continue
+                target = DIST / href[len(BP):].lstrip("/")
                 if not (target.exists() or (target / "index.html").exists()):
                     errors.append(f"{rel}: 깨진 내부 링크 {href}")
         if utm_links == 0:

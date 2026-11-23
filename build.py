@@ -21,7 +21,14 @@ ROOT = Path(__file__).resolve().parent
 
 
 def load_config():
-    return yaml.safe_load((ROOT / "config.yml").read_text(encoding="utf-8"))
+    import os
+    cfg = yaml.safe_load((ROOT / "config.yml").read_text(encoding="utf-8"))
+    # 환경변수로 주소만 바꿔 빌드할 수 있다: SITE_BASE_URL, SITE_BASE_PATH, SITE_CUSTOM_DOMAIN
+    for env, key in (("SITE_BASE_URL", "base_url"), ("SITE_BASE_PATH", "base_path"),
+                     ("SITE_CUSTOM_DOMAIN", "custom_domain")):
+        if env in os.environ:
+            cfg[key] = os.environ[env]
+    return cfg
 
 
 def fill(text, cfg):
@@ -253,6 +260,14 @@ footer p{margin:4px 0}
 """
 
 
+def with_base(text, cfg):
+    """사이트를 폴더 아래(예: ponanpa.com/guide/)에 둘 때 내부 주소 앞에 base_path를 붙인다."""
+    bp = (cfg.get("base_path") or "").rstrip("/")
+    if not bp:
+        return text
+    return re.sub(r'(href|src)="/(?!/)', lambda m: f'{m.group(1)}="{bp}/', text)
+
+
 def make_favicon(out):
     """로고 파일을 받기 전까지 쓰는 임시 파비콘(주황 바탕 + 흰 원). static/favicon.ico 가 있으면 그걸 쓴다."""
     custom = ROOT / "static" / "favicon.ico"
@@ -282,7 +297,7 @@ def build(out_dir):
     for p in pages:
         target = out / "index.html" if p["slug"] == "index" else out / p["slug"] / "index.html"
         target.parent.mkdir(parents=True, exist_ok=True)
-        target.write_text(page_html(cfg, p, pages), encoding="utf-8")
+        target.write_text(with_base(page_html(cfg, p, pages), cfg), encoding="utf-8")
 
     (out / "style.css").write_text(CSS, encoding="utf-8")
     (out / ".nojekyll").write_text("", encoding="utf-8")
@@ -337,10 +352,10 @@ def build(out_dir):
     key = cfg.get("indexnow_key")
     if key:
         (out / f"{key}.txt").write_text(key, encoding="utf-8")
-    (out / "404.html").write_text(
+    (out / "404.html").write_text(with_base(
         '<!doctype html><html lang="ko"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'
         '<meta name="robots" content="noindex"><title>페이지를 찾을 수 없습니다</title><link rel="stylesheet" href="/style.css">'
-        '<main><h1>페이지를 찾을 수 없습니다</h1><p><a href="/">안내 첫 화면으로 가기</a></p></main></html>',
+        '<main><h1>페이지를 찾을 수 없습니다</h1><p><a href="/">안내 첫 화면으로 가기</a></p></main></html>', cfg),
         encoding="utf-8")
     print(f"빌드 완료: {len(pages)}쪽 → {out}")
     return 0

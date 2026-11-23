@@ -1,6 +1,7 @@
 # 폰안파는폰가게 정보 페이지 설정
 # 주소가 정해지면 base_url 한 줄만 바꾼다. (A안: https://guide.ponanpa.com / B안: https://ponanpa.github.io)
 base_url: "https://ponanpa.github.io"
+base_path: ""              # 폴더 아래에 둘 때만 예: /guide (ponanpa.com/guide/)
 custom_domain: ""          # A안일 때만 예: guide.ponanpa.com (CNAME 파일이 만들어짐)
 site_name: "폰안파는폰가게 안내"
 brand: "폰안파는폰가게"
